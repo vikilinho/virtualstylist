@@ -1,0 +1,7 @@
+{
+  "name": "Virtual Stylist",
+  "description": "Upload a photo of a clothing item and get AI-generated outfit ideas. The app analyzes your item's color and style to create three complete looks (Casual, Business, Night Out) visualized as flat-lay images.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
