@@ -1,14 +1,32 @@
 import { GoogleGenAI, Modality } from "@google/genai";
 
-const OUTFIT_STYLES = ["Casual", "Business", "Night Out"];
+export const OUTFIT_STYLES = [
+  "Casual", 
+  "Business", 
+  "Night Out",
+  "Streetwear",
+  "Minimalist",
+  "Bohemian",
+  "Sporty",
+];
 
-export async function generateAllOutfits(
+export interface Outfit {
+  style: string;
+  src: string;
+}
+
+/**
+ * Generates a single outfit for a given style.
+ * @param base64ImageData The base64 encoded image data.
+ * @param mimeType The MIME type of the image.
+ * @param style The clothing style to generate.
+ * @returns A promise that resolves to an Outfit object.
+ */
+export async function generateOutfitForStyle(
   base64ImageData: string,
-  mimeType: string
-): Promise<string[]> {
-  // It is a best practice to create a new instance of GoogleGenAI for each request
-  // in environments where the API key might change, but for this app, a single instance is fine.
-  // We will still create it inside the function to be safe.
+  mimeType: string,
+  style: string
+): Promise<Outfit> {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   const imagePart = {
@@ -18,43 +36,56 @@ export async function generateAllOutfits(
     },
   };
 
-  const generationPromises = OUTFIT_STYLES.map(style => {
-    const textPart = {
-      text: `Analyze the provided clothing item. Then, generate a complete '${style}' outfit that includes the original item. The generated image MUST be a clean, minimalist, photorealistic 'flat-lay' style presentation on a neutral off-white background. The outfit must include perfectly matching complementary pieces like tops/bottoms, shoes, and one or two accessories. The final image should only contain the clothing and accessory items for the flat-lay.`,
-    };
+  const textPart = {
+    text: `Analyze the provided clothing item. Then, generate a complete '${style}' outfit that includes the original item. The generated image MUST be a clean, minimalist, photorealistic 'flat-lay' style presentation on a neutral off-white background. The outfit must include perfectly matching complementary pieces like tops/bottoms, shoes, and one or two accessories. The final image should only contain the clothing and accessory items for the flat-lay.`,
+  };
 
-    return ai.models.generateContent({
-      model: 'gemini-2.5-flash-image',
-      contents: {
-        parts: [imagePart, textPart],
-      },
-      config: {
-        responseModalities: [Modality.IMAGE],
-      },
-    });
+  const response = await ai.models.generateContent({
+    model: 'gemini-2.5-flash-image',
+    contents: {
+      parts: [imagePart, textPart],
+    },
+    config: {
+      responseModalities: [Modality.IMAGE],
+    },
   });
 
-  // Await all promises to resolve
-  const responses = await Promise.all(generationPromises);
+  const candidate = response?.candidates?.[0];
 
-  // Process each response to extract the generated image
-  const generatedImages = responses.map((response, index) => {
-    // Check for response and candidates
-    if (!response || !response.candidates || response.candidates.length === 0) {
-      throw new Error(`No candidates found in Gemini response for ${OUTFIT_STYLES[index]} style.`);
+  if (!candidate || !candidate.content || !candidate.content.parts) {
+    const finishReason = candidate?.finishReason;
+    const finishMessage = candidate?.finishMessage;
+    console.error(`Gemini response issue for ${style} style. Finish reason: ${finishReason}. Message: ${finishMessage}`);
+    throw new Error(`No valid content found in Gemini response for ${style} style. The content may have been blocked.`);
+  }
+
+  for (const part of candidate.content.parts) {
+    if (part.inlineData && part.inlineData.data) {
+      const base64ImageBytes: string = part.inlineData.data;
+      return {
+        style,
+        src: `data:${part.inlineData.mimeType};base64,${base64ImageBytes}`,
+      };
     }
+  }
 
-    // Loop through parts to find the image data
-    for (const part of response.candidates[0].content.parts) {
-      if (part.inlineData && part.inlineData.data) {
-        const base64ImageBytes: string = part.inlineData.data;
-        return `data:${part.inlineData.mimeType};base64,${base64ImageBytes}`;
-      }
-    }
+  throw new Error(`No image data found in Gemini response for ${style} style.`);
+}
 
-    // If no image is found in the parts, throw an error
-    throw new Error(`No image data found in Gemini response for ${OUTFIT_STYLES[index]} style.`);
-  });
 
-  return generatedImages;
+/**
+ * Generates the initial three outfits (Casual, Business, Night Out).
+ * @param base64ImageData The base64 encoded image data.
+ * @param mimeType The MIME type of the image.
+ * @returns A promise that resolves to an array of three Outfit objects.
+ */
+export async function generateAllOutfits(
+  base64ImageData: string,
+  mimeType: string
+): Promise<Outfit[]> {
+  const initialStyles = OUTFIT_STYLES.slice(0, 3);
+  const generationPromises = initialStyles.map(style =>
+    generateOutfitForStyle(base64ImageData, mimeType, style)
+  );
+  return Promise.all(generationPromises);
 }

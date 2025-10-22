@@ -84,8 +84,8 @@ const ImageUploader = React.forwardRef<HTMLInputElement, ImageUploaderProps>(
         onDragLeave={handleDragEvents}
         onDragOver={handleDragEvents}
         className={`relative w-full aspect-square border-2 rounded-2xl flex flex-col items-center justify-center text-center p-4 transition-colors duration-200
-          ${isDragging ? 'border-solid border-blue-600 bg-blue-100' : 'border-dashed border-slate-300 bg-slate-50'}
-          ${isDisabled ? 'cursor-not-allowed bg-slate-100' : 'cursor-pointer hover:border-blue-400'}`}
+          ${isDragging ? 'border-solid border-violet-600 bg-violet-100' : 'border-dashed border-slate-300 bg-slate-50'}
+          ${isDisabled ? 'cursor-not-allowed bg-slate-100' : 'cursor-pointer hover:border-violet-400'}`}
         onClick={triggerClick}
       >
         <HiddenInput />
@@ -95,7 +95,7 @@ const ImageUploader = React.forwardRef<HTMLInputElement, ImageUploaderProps>(
             <p className="font-semibold">Tap to upload a photo</p>
           ) : (
             <p className="font-semibold">
-              Drop an image or <span className="text-blue-600">Browse</span>
+              Drop an image or <span className="text-violet-600">Browse</span>
             </p>
           )}
           <p className="text-xs mt-1">PNG, JPG, or WEBP</p>
